@@ -1,16 +1,18 @@
 const uuid4 = require('uuid/v4');
 const getPort = require('get-port');
 const { Docker } = require('node-docker-api');
+const { Client } = require('pg');
 
 
 class DockerizedPostgres {
-  constructor({ beforeHook, afterHook, tag = 'latest', logger }) {
+  constructor({ beforeHook, afterHook, tag = 'latest', connectionTimeout, logger }) {
     this.beforeHook = beforeHook;
     this.afterHook = afterHook;
     this.tag = tag;
 
     this.port = null;
     this.containerName = `postgres-${uuid4()}`;
+    this.connectionTimeout = 20000;
 
     this.log = logger || console.log.bind(console);
   }
@@ -35,12 +37,12 @@ class DockerizedPostgres {
 
     try {
       await this.postgresContainer.start();
-      this.log(`Started postgres instance on port: ${this.port}.`);
+      this.log(`\nStarted postgres instance on port: ${this.port}.`);
     } catch (e) {
       this.log(`Failed to start postgres instance: ${e}.`);
     }
 
-    await this._sleep(5000);
+    await this.waitForConnection();
 
     try {
       await this.beforeHook(this.port);
@@ -62,6 +64,34 @@ class DockerizedPostgres {
     await this.postgresContainer.delete();
 
     this.log(`Stopped postgres instance on port: ${this.port}.`);
+  }
+
+  async waitForConnection() {
+    let client;
+    let sleepTime = 1000;
+    let waitTime = 0;
+
+    while (waitTime < this.connectionTimeout) {
+      waitTime = waitTime + sleepTime;
+      try {
+        client = new Client({
+          host: '0.0.0.0',
+          port: this.port,
+          user: 'postgres',
+          password: 'postgres',
+          database: 'postgres'
+        });
+        await client.connect();
+        await client.query('SELECT 1;');
+
+        break;
+
+      } catch (_) {
+        await this._sleep(sleepTime);
+      }
+    }
+
+    await client.end();
   }
 
   _sleep(ms) {
