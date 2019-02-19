@@ -1,0 +1,28 @@
+{
+  "name": "dockerized-postgres",
+  "version": "0.1.0",
+  "description": "Simple package for starting and shutting down dockerized postgres instance (mainly for tests purposes)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sadkovoy/dockerized-postgres.git"
+  },
+  "keywords": [
+    "docker",
+    "postgres"
+  ],
+  "author": "sadkovoy",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sadkovoy/dockerized-postgres/issues"
+  },
+  "homepage": "https://github.com/sadkovoy/dockerized-postgres#readme",
+  "dependencies": {
+    "get-port": "^4.1.0",
+    "node-docker-api": "^1.1.22",
+    "uuid": "^3.3.2"
+  }
+}
