@@ -80,4 +80,4 @@ class DockerizedPostgres {
 }
 
 
-exports = DockerizedPostgres;
+module.exports = DockerizedPostgres;
