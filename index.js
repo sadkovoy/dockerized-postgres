@@ -44,18 +44,18 @@ class DockerizedPostgres {
 
     try {
       await this.beforeHook(this.port);
-      console.log('Called beforeHook');
+      this.log('Called beforeHook');
     } catch (e) {
-      console.log(`Failed to execute beforeHook: ${e}`);
+      this.log(`Failed to execute beforeHook: ${e}`);
     }
   }
 
   async shutdown() {
     try {
       await this.afterHook(this.port);
-      console.log('Called afterHook');
+      this.log('Called afterHook');
     } catch (e) {
-      console.log(`Failed to execute afterHook: ${e}`);
+      this.log(`Failed to execute afterHook: ${e}`);
     }
 
     await this.postgresContainer.stop();

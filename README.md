@@ -13,5 +13,5 @@ const postgres = new DockerizedPostgres({
 });
 
 await postgres.start();
-await postgres.stop();
+await postgres.shutdown();
 ```
