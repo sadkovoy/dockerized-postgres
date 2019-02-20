@@ -27,12 +27,17 @@ class DockerizedPostgres {
     this.postgresContainer = await docker.container.create({
       Image: `postgres:${this.tag}`,
       name: this.containerName,
-      ExposedPorts: {
-        [`${this.port}/tcp`]: {},
-      },
       HostConfig: {
-        PortBindings: { [`${this.port}/tcp`]: [{ HostPort: `${this.port}` }] },
-      },
+        PublishAllPorts: false,
+        PortBindings: {
+          [`${this.port}/tcp`]: [
+            {
+              HostIp: '0.0.0.0',
+              HostPort: `${this.port}`
+            }
+          ]
+        },
+      }
     });
 
     try {
@@ -85,8 +90,9 @@ class DockerizedPostgres {
         });
         await client.connect();
         await client.query('SELECT 1;');
+        await client.end();
 
-        break;
+        return;
 
       } catch (_) {
         this.log('Connection failed, going to retry.');
@@ -94,7 +100,7 @@ class DockerizedPostgres {
       }
     }
 
-    await client.end();
+    throw new Error('Failed to connect.')
   }
 
   _sleep(ms) {
