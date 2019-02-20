@@ -1,3 +1,4 @@
+const fs = require('fs');
 const uuid4 = require('uuid/v4');
 const getPort = require('get-port');
 const { Docker } = require('node-docker-api');
@@ -18,7 +19,7 @@ class DockerizedPostgres {
   }
 
   async start() {
-    const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    const docker = new Docker(this._getDockerConnectionOptions());
     this.port = await getPort({ port: 5432 });
 
     const pullStream = await docker.image.create({}, { fromImage: 'postgres', tag: this.tag });
@@ -33,11 +34,11 @@ class DockerizedPostgres {
           [`${this.port}/tcp`]: [
             {
               HostIp: '0.0.0.0',
-              HostPort: `${this.port}`
-            }
-          ]
+              HostPort: `${this.port}`,
+            },
+          ],
         },
-      }
+      },
     });
 
     try {
@@ -86,7 +87,7 @@ class DockerizedPostgres {
           port: this.port,
           user: 'postgres',
           password: 'postgres',
-          database: 'postgres'
+          database: 'postgres',
         });
         await client.connect();
         await client.query('SELECT 1;');
@@ -100,7 +101,7 @@ class DockerizedPostgres {
       }
     }
 
-    throw new Error('Failed to connect.')
+    throw new Error('Failed to connect.');
   }
 
   _sleep(ms) {
@@ -109,12 +110,49 @@ class DockerizedPostgres {
     });
   }
 
-  _promisifyStream (stream) {
+  _promisifyStream(stream) {
     return new Promise((resolve, reject) => {
       stream.on('data', (row) => this.log(row.toString()));
       stream.on('end', resolve);
       stream.on('error', reject);
-    })
+    });
+  }
+
+  _getDockerConnectionOptions(env = process.env) {
+    const opts = {};
+
+    if (!env.DOCKER_HOST) {
+      opts.socketPath = '/var/run/docker.sock';
+      opts.host = 'localhost';
+    } else if (env.DOCKER_HOST.indexOf('unix://') === 0) {
+      opts.socketPath = env.DOCKER_HOST.substring(7) || '/var/run/docker.sock';
+    } else {
+      const split = /(?:tcp:\/\/)?(.*?):([0-9]+)/g.exec(env.DOCKER_HOST);
+
+      if (!split || split.length !== 3) {
+        throw new Error('DOCKER_HOST env variable should be something like tcp://localhost:1234');
+      }
+
+      opts.host = split[1];
+      opts.port = split[2];
+      opts.protocol = 'http';
+
+      if (env.DOCKER_USE_HTTPS) {
+        if (!env.DOCKER_CERT_PATH) {
+          throw new Error('DOCKER_CERT_PATH environment variable is not set.');
+        }
+
+        opts.protocol = 'https';
+        try {
+          opts.ca = fs.readFileSync(env.DOCKER_CERT_PATH + '/ca.pem');
+          opts.cert = fs.readFileSync(env.DOCKER_CERT_PATH + '/cert.pem');
+          opts.key = fs.readFileSync(env.DOCKER_CERT_PATH + '/key.pem');
+        } catch (e) {
+          throw new Error(`Unable to read docker certificates. ${e}`);
+        }
+      }
+    }
+    return opts;
   }
 }
 
