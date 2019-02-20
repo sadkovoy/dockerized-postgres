@@ -45,6 +45,7 @@ class DockerizedPostgres {
     await this.waitForConnection();
 
     try {
+      this.log('Going to call beforeHook');
       await this.beforeHook(this.port);
       this.log('Called beforeHook');
     } catch (e) {
@@ -54,6 +55,7 @@ class DockerizedPostgres {
 
   async shutdown() {
     try {
+      this.log('Going to call afterHook');
       await this.afterHook(this.port);
       this.log('Called afterHook');
     } catch (e) {
@@ -87,6 +89,7 @@ class DockerizedPostgres {
         break;
 
       } catch (_) {
+        this.log('Connection failed, going to retry.');
         await this._sleep(sleepTime);
       }
     }
