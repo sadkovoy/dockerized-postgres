@@ -1,6 +1,5 @@
 const fs = require('fs');
 const uuid4 = require('uuid/v4');
-const getPort = require('get-port');
 const { Docker } = require('node-docker-api');
 const { Client } = require('pg');
 
@@ -20,7 +19,6 @@ class DockerizedPostgres {
 
   async start() {
     const docker = new Docker(this._getDockerConnectionOptions());
-    this.port = await getPort({ port: 5432 });
 
     const pullStream = await docker.image.create({}, { fromImage: 'postgres', tag: this.tag });
     await this._promisifyStream(pullStream);
@@ -31,14 +29,14 @@ class DockerizedPostgres {
       HostConfig: {
         PublishAllPorts: false,
         PortBindings: {
-          [`${this.port}/tcp`]: [
+          [`5432/tcp`]: [
             {
-              HostIp: '0.0.0.0',
-              HostPort: `${this.port}`,
-            },
-          ],
+              HostIp: '',
+              HostPort: ''
+            }
+          ]
         },
-      },
+      }
     });
 
     try {
@@ -83,7 +81,7 @@ class DockerizedPostgres {
       waitTime = waitTime + sleepTime;
       try {
         client = new Client({
-          host: '0.0.0.0',
+          host: 'localhost',
           port: this.port,
           user: 'postgres',
           password: 'postgres',
