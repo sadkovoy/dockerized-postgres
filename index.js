@@ -11,6 +11,7 @@ class DockerizedPostgres {
     this.tag = tag;
 
     this.port = null;
+    this.exposedPort = 5432;
     this.containerName = `postgres-${uuid4()}`;
     this.connectionTimeout = 20000;
 
@@ -29,7 +30,7 @@ class DockerizedPostgres {
       HostConfig: {
         PublishAllPorts: false,
         PortBindings: {
-          [`5432/tcp`]: [
+          [`${this.exposedPort}/tcp`]: [
             {
               HostIp: '',
               HostPort: ''
@@ -41,9 +42,11 @@ class DockerizedPostgres {
 
     try {
       await this.postgresContainer.start();
+      const containerInfo = await this.postgresContainer.status();
+      this.port = containerInfo.data.NetworkSettings.Ports[`${this.exposedPort}/tcp`][0].HostPort;
       this.log(`\nStarted postgres instance on port: ${this.port}.`);
     } catch (e) {
-      this.log(`Failed to start postgres instance: ${e}.`);
+      throw new Error(`Failed to start postgres instance: ${e}`);
     }
 
     await this.waitForConnection();
